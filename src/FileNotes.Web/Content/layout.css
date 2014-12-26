@@ -1,0 +1,33 @@
+﻿html, body
+{
+    height: 100%;
+}
+.wrapper
+{
+    min-height: 100%;
+    height: auto !important;
+    height: 100%;
+    margin-bottom: -80px;
+}
+.footer, .push
+{
+    height: 80px;
+    clear: both;
+}
+.hero-unit
+{
+    padding-top: 20px;
+    padding-bottom: 20px;
+    padding-left: 60px;
+    padding-right: 60px;
+}
+.ins_menu
+{
+    margin-top: 10px;
+}
+
+.div-line
+{
+    margin-top: 15px;
+    border-bottom: 1px solid darkgray;
+}

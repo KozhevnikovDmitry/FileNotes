@@ -1,0 +1,35 @@
+﻿@model FileNotes.Web.Models.NoteModel.NoteVm
+@{
+    ViewBag.Title = "Show Note";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Show Note</h2>
+
+<div>
+    @Html.ActionLink("Back", "All", "EntryFile", null, new {@class="btn"})
+</div>
+
+<div>
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>
+                @Model.NoteId
+            </td>
+            <td>
+                @Model.Date
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="container">
+    @Model.Content
+</div>

@@ -1,0 +1,112 @@
+﻿@{
+    ViewBag.Title = "All";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>All files</h2>
+
+<div>
+    <input type="hidden" id="searchFilesUrl" value="@Url.Action("AllData", "EntryFile")" />
+    <input type="hidden" id="noteShowUrl" value="@Url.Action("Show", "Note")" />
+
+    <table id="jqGrid"></table>
+    <div id="jqGridPager" style="height: 35px"></div>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $("#jqGrid").jqGrid({
+                url: $("#searchFilesUrl")[0].value,
+                mtype: "GET",
+                datatype: "json",
+                colModel: [
+                    { label: 'Id', name: 'Id', key: true, width: 75, sortable: true, formatter: formatLink },
+                    { label: 'File name', name: 'SourceFileName', width: 150, sortable: true, formatter: formatLink },
+                    { label: 'Size, b', name: 'Size', width: 150, sortable: true },
+                    { label: 'State', 
+                      name: 'EntryFileState', 
+                      width: 150, 
+                      sortable: true, 
+                      stype: "select",
+                      searchoptions: { value: ":[All];0:Parsed succesfully;1:Parsed with errors;2:Lost. Can not access" }
+                    }
+                ],
+                viewrecords: true,
+                width: 780,
+                height: 350,
+                rowNum: 20,
+                pager: "#jqGridPager",
+                beforeRequest: restoreGridParameters,
+            });
+
+            $('#jqGrid').jqGrid('filterToolbar');
+            $('#jqGrid').jqGrid('navGrid', "#jqGridPager", {
+                search: false,
+                add: false,
+                edit: false,
+                del: false,
+                refresh: true
+            });
+
+            $(".ui-jqgrid-sortable").height(27);
+            restoreGridFilters();
+        });
+
+        $(window).unload(function() {
+            saveGridParameters($("#jqGrid"));
+        });
+
+        function formatLink(cellValue, options, rowObject) {
+            var linkHtml = "<a href='" + $("#noteShowUrl")[0].value + "/" + rowObject.NoteId + "'>" + cellValue + "</a>";
+            return linkHtml;
+        }
+
+        function saveGridParameters(grid) {
+            var gridParams = new Object();
+            var filterData = new Object();
+
+            gridParams.sortname = grid.jqGrid('getGridParam', 'sortname');
+            gridParams.sortorder = grid.jqGrid('getGridParam', 'sortorder');
+            gridParams.page = grid.jqGrid('getGridParam', 'page');
+            gridParams.rowNum = grid.jqGrid('getGridParam', 'rowNum');
+            gridParams.postData = grid.jqGrid('getGridParam', 'postData');
+            gridParams.search = grid.jqGrid('getGridParam', 'search');
+
+            filterData.Id = $("#gs_Id")[0].value;
+            filterData.SourceFileName = $("#gs_SourceFileName")[0].value;
+            filterData.Size = $("#gs_Size")[0].value;
+            filterData.EntryFileState = $("#gs_EntryFileState")[0].value;
+
+            localStorage.setItem('gridParams', JSON.stringify(gridParams));
+            localStorage.setItem('filterData', JSON.stringify(filterData));
+        }
+
+        function restoreGridParameters() {
+            var gridParams = localStorage.getItem('gridParams');
+            if (gridParams != null && gridParams != "") {
+                var gridInfo = $.parseJSON(gridParams);
+                var grid = $('#jqGrid');
+
+                grid.jqGrid('setGridParam', { sortname: gridInfo.sortname });
+                grid.jqGrid('setGridParam', { sortorder: gridInfo.sortorder });
+                grid.jqGrid('setGridParam', { page: gridInfo.page });
+                grid.jqGrid('setGridParam', { rowNum: gridInfo.rowNum });
+                grid.jqGrid('setGridParam', { postData: gridInfo.postData });
+                grid.jqGrid('setGridParam', { search: gridInfo.search });
+                localStorage.removeItem('gridParams');
+            }
+        }
+
+        function restoreGridFilters() {
+            var filterData = localStorage.getItem('filterData');
+            if (filterData != null && filterData != "") {
+                var filters = $.parseJSON(filterData);
+                $("#gs_Id")[0].value = filters.Id;
+                $("#gs_SourceFileName")[0].value = filters.SourceFileName;
+                $("#gs_Size")[0].value = filters.Size;
+                $("#gs_EntryFileState")[0].value = filters.EntryFileState;
+                localStorage.removeItem('filterData');
+            }
+        }
+    </script>
+</div>
+

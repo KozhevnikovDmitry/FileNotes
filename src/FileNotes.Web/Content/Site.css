@@ -1,0 +1,98 @@
+﻿body {
+    padding-top: 50px;
+    padding-bottom: 20px;
+}
+
+/* Set padding to keep content from hitting the edges */
+.body-content {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* Override the default bootstrap behavior where horizontal description lists 
+   will truncate terms that are too long to fit in the left column 
+*/
+.dl-horizontal dt {
+    white-space: normal;
+}
+
+.field-validation-error
+{
+    color: red;
+}
+
+.validation-summary-errors
+{
+    color: Red;
+}        
+
+.message-info 
+{
+    color: blue;
+}
+
+ ul.hr {
+    margin: 0; /* Обнуляем значение отступов */
+    padding: 4px; /* Значение полей */
+    horiz-align: center;
+   }
+   ul.hr li {
+    display: inline; /* Отображать как строчный элемент */
+    margin-right: 5px; /* Отступ слева */
+    padding: 3px; /* Поля вокруг текста */
+   }
+
+    ul.hr1 {
+    margin: 0; /* Обнуляем значение отступов */
+    padding: 4px; /* Значение полей */
+    horiz-align: center;
+   }
+   ul.hr1 li {
+    display: inline; /* Отображать как строчный элемент */
+    margin-right: 5px; /* Отступ слева */
+    padding: 3px; /* Поля вокруг текста */
+       font-size: 50px;
+   }
+
+.processingResult 
+   {
+    width: 5px;
+    height: 5px;
+    padding:5px;
+    border-radius: 10px 10px 10px 10px;
+   }
+
+.processingResult.green 
+   {
+    background: chartreuse;
+   }
+.processingResult.red 
+   {
+    background: firebrick;
+   }
+.processingResult.yellow 
+   {
+    background: gold;
+   }
+
+
+/* Set width on the form input elements since they're 100% wide by default */
+input,
+select,
+textarea {
+    max-width: 480px;
+}
+
+.textarea-long select {
+    width: 400px;   
+}
+
+
+.textarea-long input {
+    width: 400px;   
+}
+
+
+
+
+

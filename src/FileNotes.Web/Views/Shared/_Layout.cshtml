@@ -1,0 +1,41 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>FileNotes - @ViewBag.Title</title>
+    <meta name="viewport" content="width=device-width" />
+
+    <script src="/Scripts/underscore.js"></script>
+    <script src="/Scripts/jquery-1.11.0.min.js"></script>
+    <script src="/Scripts/jquery.jqGrid.min.js"></script>
+    <script src="/Scripts/grid.locale-en.js"></script>
+
+    @Styles.Render("~/Content/site")
+</head>
+
+<body>
+    <div class="container wrapper">
+        <div class="container wrapper">
+            <header>
+                <div class="page-header row-fluid">
+                    <div class="span6">
+                        <h1>FileNotes</h1>
+                    </div>
+                </div>
+            </header>
+            <div class="hero-unit" style="font-size: 14px">
+                @RenderBody()
+            </div>
+            <div class="push">
+            </div>
+        </div>
+        <div class="footer">
+            <div class="container">
+                <p class="muted">
+                    © 2014. Kozhevnikov Dmitry, d.o.kozhevnikov@gmail.com
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
