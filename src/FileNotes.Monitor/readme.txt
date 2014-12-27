@@ -7,13 +7,10 @@
 	2.2. Готовый дистрибутив программы будет скомпонован в каталог src/FileNotes.Monitor/distr
 	2.3. Комплектность дистрибутива:
 		2.3.1. Scripts/db-script.sqlbuild.cmd
-		2.3.2. Dapper.dll
-		2.3.3. Dapper.pdb
-		2.3.4. Dapper.xml
-		2.3.5. FileNotes.Domain.dll
-		2.3.6. FileNotes.Monitor.exe
-		2.3.7. FileNotes.Monitor.exe.config
-		2.3.8. readme.txt
+		2.3.2. FileNotes.Domain.dll
+		2.3.3. FileNotes.Monitor.exe
+		2.3.4. FileNotes.Monitor.exe.config
+		2.3.5. readme.txt
 3. Создание структуры базы данных.
 	3.1. В каталоге дистрибутива находится файл с SQL-скриптом создания БД - Scripts/db-script.sql
 	3.2. Для того, чтобы создать структуры базы данных необходимо выполнить данный скрипт на выбранном инстансе SQL Server.

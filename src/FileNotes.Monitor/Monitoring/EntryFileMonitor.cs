@@ -1,12 +1,11 @@
-using System;
+﻿using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.IO;
-using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using Dapper;
 using FileNotes.Domain;
 using FileNotes.Monitor.Tool;
 
@@ -31,7 +30,7 @@ namespace FileNotes.Monitor.Monitoring
         /// Directory for processed files
         /// </summary>
         private readonly string _destinationDirectory;
-        
+
         /// <summary>
         /// Logger of steps
         /// </summary>
@@ -90,9 +89,6 @@ namespace FileNotes.Monitor.Monitoring
                     {
                         break;
                     }
-
-                    // sleep 1 second before next session
-                    Thread.Sleep(1000);
                 }
             }, _tokenSource.Token);
         }
@@ -103,14 +99,16 @@ namespace FileNotes.Monitor.Monitoring
         private void Watch()
         {
             // take 1000 files as enumerable
-            var files = Directory.EnumerateFiles(_sourceDirectory).Take(1000);
+            var files = Directory.EnumerateFiles(_sourceDirectory);
 
             // process files as parallel
-            Parallel.ForEach(files, file =>
+            Parallel.ForEach(files, async file =>
             {
                 // separated connection for file
                 using (var db = new SqlConnection(_connectionString))
                 {
+                    db.Open();
+
                     // only if cancellation was not requested
                     if (_tokenSource.Token.IsCancellationRequested)
                     {
@@ -118,7 +116,7 @@ namespace FileNotes.Monitor.Monitoring
                     }
 
                     // move file
-                    var movedFile = Move(db, file);
+                    var movedFile = await Move(db, file);
 
                     // no such file or it is locked. Try it later
                     if (string.IsNullOrEmpty(movedFile))
@@ -127,13 +125,13 @@ namespace FileNotes.Monitor.Monitoring
                     }
 
                     // read data from moved file
-                    var data = Read(db, movedFile);
-                    
+                    var data = await Read(db, movedFile);
+
                     // parse data to Note instance
-                    var note = Parse(db, data, file);
-                    
+                    var note = await Parse(db, data, file);
+
                     // save note to storage
-                    Save(db, note, file, data != null? data.Length : 0);
+                    await Save(db, note, file, data != null ? data.Length : 0);
                 }
             });
         }
@@ -144,22 +142,23 @@ namespace FileNotes.Monitor.Monitoring
         /// <param name="db">Connection</param>
         /// <param name="file">Path to file in source directory</param>
         /// <returns>Fullpath to moved file. Returns <c>null</c> when fails to move</returns>
-        private string Move(IDbConnection db, string file)
+        private async Task<string> Move(IDbConnection db, string file)
         {
             try
             {
                 // combine path to move
                 var destFile = Path.Combine(_destinationDirectory, string.Format("{0}_{1}", Guid.NewGuid(), Path.GetFileName(file)));
-                
-                _logger.LogMessage(db, string.Format("Move file [{0}] to [{1}]", file, destFile));
+
+                await _logger.LogMessageAsync(db, string.Format("Move file [{0}] to [{1}]", file, destFile));
                 // move!
                 File.Move(file, destFile);
+
                 return destFile;
             }
             catch (Exception ex)
             {
                 // no such file or it is locked
-                _logger.LogMessage(db, string.Format("Fail to move and read file [{0}]: \r\n {1}", file, ex));
+                _logger.LogMessage(db, string.Format("Fail to move file [{0}]: \r\n {1}", file, ex));
                 return null;
             }
         }
@@ -170,12 +169,17 @@ namespace FileNotes.Monitor.Monitoring
         /// <param name="db">Connection</param>
         /// <param name="file">File to read</param>
         /// <returns>All bytes of file. Returns <c>null</c> when fails to read.</returns>
-        private byte[] Read(IDbConnection db, string file)
+        private async Task<byte[]> Read(IDbConnection db, string file)
         {
             try
             {
-                _logger.LogMessage(db, string.Format("Read file [{0}]", file));
-                return File.ReadAllBytes(file);
+                await _logger.LogMessageAsync(db, string.Format("Read file [{0}]", file));
+                using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
+                {
+                    var buff = new byte[file.Length];
+                    await fs.ReadAsync(buff, 0, file.Length);
+                    return buff;
+                }
             }
             catch (Exception ex)
             {
@@ -191,14 +195,14 @@ namespace FileNotes.Monitor.Monitoring
         /// <param name="data">File bytes</param>
         /// <param name="srcFile">Name of file</param>
         /// <returns>Returns <c>Note</c> instance. Returns <c>NotParsedNote</c> instance when fails to parse. Returns <c>LostNote</c> when <paramref name="data"/> is null.</returns>
-        private Note Parse(IDbConnection db, byte[] data, string srcFile)
+        private async Task<Note> Parse(IDbConnection db, byte[] data, string srcFile)
         {
-            _logger.LogMessage(db, string.Format("Parse data of file [{0}]", srcFile));
-            
+            await _logger.LogMessageAsync(db, string.Format("Parse data of file [{0}]", srcFile));
+
             // if data is lost
             if (data == null)
             {
-                _logger.LogMessage(db, string.Format("File [{0}] was lost", srcFile));
+                await _logger.LogMessageAsync(db, string.Format("File [{0}] was lost", srcFile));
                 return new LostNote
                 {
                     Id = 0,
@@ -211,7 +215,7 @@ namespace FileNotes.Monitor.Monitoring
             {
                 // parse
                 var xml = new XmlDocument();
-                xml.Load(new StreamReader(new MemoryStream(data)));
+                xml.Load(new StreamReader(new MemoryStream(data), Encoding.UTF8));
                 return new Note
                 {
                     NoteId = Convert.ToInt32(xml.ChildNodes[1]["id"].InnerText),
@@ -222,7 +226,7 @@ namespace FileNotes.Monitor.Monitoring
             catch (Exception ex)
             {
                 _logger.LogMessage(db, string.Format("File [{0}] was parsed with errors: \r\n {1}", srcFile, ex));
-                
+
                 // fail to parse
                 return new NotParsedNote
                 {
@@ -240,14 +244,14 @@ namespace FileNotes.Monitor.Monitoring
         /// <param name="note">Note to save</param>
         /// <param name="srcFile">Path to file with note entry</param>
         /// <param name="size">Size of file</param>
-        private void Save(IDbConnection db, Note note, string srcFile, int size)
+        private async Task Save(IDbConnection db, Note note, string srcFile, int size)
         {
             try
             {
-                _logger.LogMessage(db, string.Format("Save note id=[{0}] from file [{1}]", note, srcFile));
+                await _logger.LogMessageAsync(db, string.Format("Save note id=[{0}] from file [{1}]", note, srcFile));
 
-                // insert records
-                db.Execute(@"INSERT INTO [dbo].[Note]
+                var cmd = db.CreateCommand() as SqlCommand;
+                cmd.CommandText = @"INSERT INTO [dbo].[Note]
                                                ([NoteId], 
                                                 [Date], 
                                                 [Content])
@@ -262,21 +266,19 @@ namespace FileNotes.Monitor.Monitoring
                                      VALUES (@SourceFileName,
                                              @Size,
                                              @EntryFileState,
-                                             CAST(SCOPE_IDENTITY() as int));",
-                            new
-                            {
-                                NoteId = note.NoteId,
-                                Date = note.Date,
-                                Content = note.Content.SafetyTake(1024),
-                                SourceFileName = Path.GetFileName(srcFile),
-                                // state depends of note type.
-                                EntryFileState = note is NotParsedNote ? 
-                                                                          EntryFileState.NotParsed : 
-                                                                          note is LostNote ? 
-                                                                                            EntryFileState.Lost : 
-                                                                                            EntryFileState.Parsed,
-                                Size = size,
-                            });
+                                             CAST(SCOPE_IDENTITY() as int));";
+
+                cmd.Parameters.Add(new SqlParameter("NoteId", note.NoteId));
+                cmd.Parameters.Add(new SqlParameter("Date", note.Date));
+                cmd.Parameters.Add(new SqlParameter("Content", note.Content.SafetyTake(1024)));
+                cmd.Parameters.Add(new SqlParameter("SourceFileName", Path.GetFileName(srcFile)));
+                cmd.Parameters.Add(new SqlParameter("Size", size));
+                cmd.Parameters.Add(new SqlParameter("EntryFileState", (int)(note is NotParsedNote ?
+                                                                          EntryFileState.NotParsed :
+                                                                          note is LostNote ?
+                                                                                            EntryFileState.Lost :
+                                                                                            EntryFileState.Parsed)));
+                await cmd.ExecuteNonQueryAsync();
 
             }
             catch (Exception ex)
